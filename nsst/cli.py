@@ -74,13 +74,13 @@ def query_gsi1(gsi1pk, reverse, limit):
 
 @click.command()
 @click.option('--pk', help='The primary key',
-              prompt=True, required=True)
+              prompt='pk', required=True)
 @click.option('--sk', help='The the sort key',
-              prompt=True, required=True)
+              prompt='sk', required=True)
 @click.option('--gsi1pk', help='The primary key for GSI 1',
-              prompt=True, required=True)
+              prompt='gsi1pk', required=True)
 @click.option('--gsi1sk', help='The the sort key for GSI 1',
-              prompt=True, required=True)
+              prompt='gsi1sk', required=True)
 @click.option('--item', help='The item',
               prompt=True, required=True)
 @click.option('--if-not-exists', help='Only put if the item does not exist',
@@ -104,9 +104,9 @@ def put_item(pk, sk, gsi1pk, gsi1sk, item, if_not_exists):
 
 @click.command()
 @click.option('--pk', help='The primary key',
-              prompt=True, required=True)
+              prompt='pk', required=True)
 @click.option('--sk', help='The sort key',
-              prompt=True, required=True)
+              prompt='sk', required=True)
 def get_item(pk, sk):
     def on_not_found():
         raise click.ClickException('Item does not exist')
@@ -116,9 +116,9 @@ def get_item(pk, sk):
 
 @click.command()
 @click.option('--pk', help='The primary key',
-              prompt=True, required=True)
+              prompt='pk', required=True)
 @click.option('--sk', help='The sort key',
-              prompt=True, required=True)
+              prompt='sk', required=True)
 def delete_item(pk, sk):
     table.delete_item(pk=pk, sk=sk)
 

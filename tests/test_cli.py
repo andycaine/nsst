@@ -44,6 +44,30 @@ def test_put_item(runner, table, create_table):
     assert item['title'] == 'bob'
 
 
+def test_put_item_required_options(runner, create_table, table):
+    inputs = [
+        'foo#1',
+        'foo#1',
+        'foo#',
+        '2024-11-25T19:33:05',
+        '{"title": "bob"}'
+    ]
+    print('\n'.join(inputs))
+    result = runner.invoke(cli, ['put-item'],
+                           input='\n'.join(inputs))
+    assert result.exit_code == 0, result.output
+    assert result.output.split('\n') == [
+        'pk: foo#1',
+        'sk: foo#1',
+        'gsi1pk: foo#',
+        'gsi1sk: 2024-11-25T19:33:05',
+        'Item: {"title": "bob"}',
+        ''
+    ]
+    item = table.get_item(pk='foo#1', sk='foo#1')
+    assert item['title'] == 'bob'
+
+
 def test_put_item_if_not_exists(runner, table, create_table):
     result = runner.invoke(cli, [
         'put-item',
@@ -123,6 +147,19 @@ def test_get_item(runner, items):
     assert item['title'] == 'Test item 1'
 
 
+def test_get_item_required_options(runner, items):
+    inputs = [
+        'foo#1',
+        'foo#1'
+    ]
+    result = runner.invoke(cli, ['get-item'],
+                           input='\n'.join(inputs))
+    assert result.exit_code == 0, result.output
+    assert result.output.startswith('pk: foo#1\nsk: foo#1\n')
+    item = json.loads(result.output.replace('pk: foo#1\nsk: foo#1\n', ''))
+    assert item['title'] == 'Test item 1'
+
+
 def test_get_item_that_does_not_exist(runner, items):
     result = runner.invoke(cli, [
         'get-item',
@@ -141,6 +178,19 @@ def test_delete_item(runner, items, table):
     ])
     assert result.exit_code == 0, result.output
     assert result.output == ''
+    item = table.get_item(pk='foo#1', sk='foo#1')
+    assert item is None
+
+
+def test_delete_item_required_options(runner, items, table):
+    inputs = [
+        'foo#1',
+        'foo#1'
+    ]
+    result = runner.invoke(cli, ['delete-item'],
+                           input='\n'.join(inputs))
+    assert result.exit_code == 0, result.output
+    assert result.output.startswith('pk: foo#1\nsk: foo#1\n')
     item = table.get_item(pk='foo#1', sk='foo#1')
     assert item is None
 
