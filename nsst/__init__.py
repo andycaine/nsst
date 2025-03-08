@@ -90,14 +90,13 @@ class Table:
         except ClientError as e:
             _handle_ddb_error(e, ItemAlreadyExists)
 
-    def query_gsi1(self, gsi1pk, limit=100, esk=None, transformer=_id,
-                   reverse=False, auto_page=True):
+    def query(self, key_condition, expression_attribute_values, index_name,
+              limit=100, esk=None, transformer=_id, reverse=False,
+              auto_page=True):
         query_args = dict(
-            KeyConditionExpression='gsi1pk = :gsi1pk',
-            ExpressionAttributeValues={
-                ':gsi1pk': gsi1pk
-            },
-            IndexName='gsi1',
+            KeyConditionExpression=key_condition,
+            ExpressionAttributeValues=expression_attribute_values,
+            IndexName=index_name,
             ScanIndexForward=not reverse,
             Limit=limit
         )
@@ -125,6 +124,19 @@ class Table:
             return _auto_page(esk=esk)
         else:
             return _manual_page()
+
+    def query_gsi1(self, gsi1pk, limit=100, esk=None, transformer=_id,
+                   reverse=False, auto_page=True):
+        return self.query(
+            key_condition='gsi1pk = :gsi1pk',
+            expression_attribute_values={':gsi1pk': gsi1pk},
+            index_name='gsi1',
+            reverse=reverse,
+            limit=limit,
+            esk=esk,
+            transformer=transformer,
+            auto_page=auto_page
+        )
 
     def scan(self, esk=None):
         scan_args = {}
@@ -164,10 +176,12 @@ class Table:
             for item in response['Responses'][self.table_name]
         ]
 
-    def batch_write(self, puts):
+    def batch_write(self, puts, deletes=[]):
         with self.table.batch_writer() as batch:
             for put in puts:
                 batch.put_item(Item=put)
+            for delete in deletes:
+                batch.delete_item(Key=delete)
 
     def create_table(self):
         self.dynamodb.create_table(
