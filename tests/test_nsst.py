@@ -3,7 +3,7 @@ from unittest.mock import Mock
 
 import pytest
 
-from nsst import OptimisticConcurrencyError, ItemAlreadyExists
+from nsst import OptimisticConcurrencyError, ItemAlreadyExists, ItemNotFound
 from utils import hours_ago
 
 
@@ -49,7 +49,27 @@ def test_put_existing_item(table, items):
     assert foo.title == 'Updated item'
 
 
-def test_update_with_same_version(table, items):
+def test_update_existing_item(table, items):
+    table.update_item(
+        pk='foo#5',
+        sk='foo#5',
+        title='Updated item'
+    )
+    foo = table.get_item(pk='foo#5', sk='foo#5', transformer=make_foo)
+    assert foo.title == 'Updated item'
+    assert foo.version == 1
+
+
+def test_update_non_existing_item(table, items):
+    with pytest.raises(ItemNotFound):
+        table.update_item(
+            pk='foo#999',
+            sk='foo#999',
+            title='New item'
+        )
+
+
+def test_put_with_same_version(table, items):
     with pytest.raises(OptimisticConcurrencyError):
         table.put_item(
             pk='foo#5',
@@ -61,7 +81,7 @@ def test_update_with_same_version(table, items):
         )
 
 
-def test_update_with_no_version_attribute(table, items):
+def test_put_with_no_version_attribute(table, items):
     table.put_item(
         pk='foo#5',
         sk='foo#5',

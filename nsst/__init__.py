@@ -14,6 +14,10 @@ class ItemAlreadyExists(Exception):
     pass
 
 
+class ItemNotFound(Exception):
+    pass
+
+
 class OptimisticConcurrencyError(Exception):
     pass
 
@@ -31,6 +35,24 @@ class Table:
         self.table_name = table_name
         self.dynamodb = boto3.resource('dynamodb')
         self.table = self.dynamodb.Table(table_name)
+
+    def update_item(self, pk, sk, **kwargs):
+        try:
+            self.table.update_item(
+                Key={
+                    'pk': pk,
+                    'sk': sk
+                },
+                UpdateExpression='SET ' + ', '.join(
+                    f'{k} = :{k}' for k in kwargs.keys()
+                ),
+                ExpressionAttributeValues={
+                    f':{k}': v for k, v in kwargs.items()
+                },
+                ConditionExpression='attribute_exists(pk)'
+            )
+        except ClientError as e:
+            _handle_ddb_error(e, ItemNotFound)
 
     def put_item(self, pk, sk, gsi1pk, gsi1sk, **kwargs):
         item = dict(
