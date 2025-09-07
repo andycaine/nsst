@@ -1,9 +1,14 @@
 name: pre-commit
+
 on:
   pull_request:
   push:
     branches:
       - "*"
+
+permissions:
+  contents: read
+
 jobs:
   main:
     runs-on: ubuntu-latest
