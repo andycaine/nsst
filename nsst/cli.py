@@ -14,23 +14,33 @@ class JSONEncoder(json.JSONEncoder):
         return super().default(obj)
 
 
-table = None
+class CliContext:
+    def __init__(self):
+        self._table = None
+
+    def connect_to_ddb(self, table_name):
+        self._table = nsst.Table(table_name)
+
+    @property
+    def table(self) -> nsst.Table:
+        if self._table is None:
+            raise RuntimeError("Not connected to a table")
+        return self._table
+
+
+ctx = CliContext()
 
 
 def pformat(data):
     return json.dumps(data, indent=2, cls=JSONEncoder)
 
 
-def _connect(table_name):
-    return nsst.Table(table_name)
-
-
 @click.command()
 def create_table():
-    table.create_table()
+    ctx.table.create_table()
 
 
-def abort_if_false(ctx, param, value):
+def abort_if_false(ctx, _, value):
     if not value:
         ctx.abort()
 
@@ -45,7 +55,7 @@ def abort_if_false(ctx, param, value):
 )
 def delete_table():
     dynamodb = boto3.resource("dynamodb")
-    dynamodb.Table(table.table_name).delete()
+    dynamodb.Table(ctx.table.table_name).delete()
 
 
 @click.command()
@@ -57,13 +67,13 @@ def delete_table():
     prompt="Are you sure you want to delete all items?",
 )
 def truncate():
-    table.truncate()
+    ctx.table.truncate()
 
 
 @click.command()
 @click.option("-l", "--limit", help="Limit the results", default=100, show_default=True)
 def scan(limit):
-    items = list(table.scan())[:limit]
+    items = list(ctx.table.scan())[:limit]
     click.echo(pformat(items))
 
 
@@ -74,7 +84,7 @@ def scan(limit):
 )
 @click.option("-l", "--limit", help="Limit the results", default=100, show_default=True)
 def query_gsi1(gsi1pk, reverse, limit):
-    items = list(table.query_gsi1(gsi1pk=gsi1pk, reverse=reverse))[:limit]
+    items = list(ctx.table.query_gsi1(gsi1pk=gsi1pk, reverse=reverse))[:limit]
     click.echo(pformat(items))
 
 
@@ -98,14 +108,14 @@ def put_item(pk, sk, gsi1pk, gsi1sk, item, if_not_exists):
     item = json.loads(item)
     if if_not_exists:
         try:
-            table.put_item_if_not_exists(
+            ctx.table.put_item_if_not_exists(
                 pk=pk, sk=sk, gsi1pk=gsi1pk, gsi1sk=gsi1sk, **item
             )
         except nsst.ItemAlreadyExists as e:
             raise click.ClickException("Item already exists") from e
     else:
         try:
-            table.put_item(pk=pk, sk=sk, gsi1pk=gsi1pk, gsi1sk=gsi1sk, **item)
+            ctx.table.put_item(pk=pk, sk=sk, gsi1pk=gsi1pk, gsi1sk=gsi1sk, **item)
         except nsst.OptimisticConcurrencyError as e:
             raise click.ClickException(
                 "A more recent version of this item already exists"
@@ -119,7 +129,7 @@ def get_item(pk, sk):
     def on_not_found():
         raise click.ClickException("Item does not exist")
 
-    item = table.get_item(pk=pk, sk=sk, on_not_found=on_not_found)
+    item = ctx.table.get_item(pk=pk, sk=sk, on_not_found=on_not_found)
     click.echo(pformat(item))
 
 
@@ -127,7 +137,7 @@ def get_item(pk, sk):
 @click.option("--pk", help="The primary key", prompt="pk", required=True)
 @click.option("--sk", help="The sort key", prompt="sk", required=True)
 def delete_item(pk, sk):
-    table.delete_item(pk=pk, sk=sk)
+    ctx.table.delete_item(pk=pk, sk=sk)
 
 
 @click.group()
@@ -140,8 +150,7 @@ def delete_item(pk, sk):
     required=True,
 )
 def cli(table_name):
-    global table
-    table = _connect(table_name)
+    ctx.connect_to_ddb(table_name)
 
 
 cli.add_command(scan)
