@@ -8,10 +8,10 @@ on:
 permissions: read-all
 
 jobs:
-  permissions:
-    id-token: write
-    contents: write
   deploy:
+    permissions:
+      id-token: write
+      contents: write
     runs-on: ubuntu-latest
 
     steps:
