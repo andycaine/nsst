@@ -1,11 +1,8 @@
 SHELL := /bin/bash
-VERSION := $(shell grep "^version" pyproject.toml | cut -d'=' -f2 | tr -d ' ' | tr -d '"')
+VERSION := $(shell uv version --short)
 
 test:
-	pytest
-
-build:
-	python -m build
+	uv run pytest
 
 tag:
 	git tag -a v$(VERSION) -m "Release $(VERSION)"
