@@ -84,7 +84,7 @@ class Table:
         self,
         key_condition,
         expression_attribute_values,
-        index_name,
+        index_name=None,
         limit=100,
         esk=None,
         transformer=_id,
@@ -94,10 +94,11 @@ class Table:
         query_args = dict(
             KeyConditionExpression=key_condition,
             ExpressionAttributeValues=expression_attribute_values,
-            IndexName=index_name,
             ScanIndexForward=not reverse,
             Limit=limit,
         )
+        if index_name:
+            query_args["IndexName"] = index_name
 
         if esk:
             query_args["ExclusiveStartKey"] = esk
